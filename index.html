@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mini Civ — Single-Move Per Turn (Refactored)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="hud">
+        <div id="status">
+            Turn <span id="turn">0</span> |
+            Food <span id="food">0</span> |
+            Units <span id="units">1</span>
+            <button id="endBtn">End Turn</button>
+            <button id="centerBtn">Center on Unit</button>
+        </div>
+        <div id="instructions">Single move ends turn. Units = ★, Cities = 🏰. Cities glow when ready. Drag/scroll to pan.</div>
+    </div>
+    <div id="map"><div id="world"></div></div>
+    <script src="script.js"></script>
+</body>
+</html>
