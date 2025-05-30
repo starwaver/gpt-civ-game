@@ -56,7 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
             tile.div.classList.toggle('city', tile.city);
             tile.div.classList.toggle('unit', !!tile.unit);
             tile.div.classList.toggle('selected', Game.selected && tile.unit === Game.selected);
-            tile.div.classList.toggle('visited-tile', tile.visited); // Add/remove visited class
+            // Apply 'visited-tile' class if the tile has been visited
+            tile.div.classList.toggle('visited-tile', tile.visited); 
             if (tile.city) {
                 const isReady = Game.turn - tile.last >= CFG.CITY_CD && Game.player.food >= CFG.COST.SPAWN_UNIT;
                 tile.div.classList.toggle('ready', isReady);
@@ -81,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         endTurn: () => {
             Game.turn++;
             Renderer.updateHUD();
-            Renderer.renderAll(); // Re-render all to update city readiness, etc.
+            Renderer.renderAll(); // Re-render all to update city readiness, visited status, etc.
         },
         selectUnit: (unit) => {
             const oldSelectedTileObj = Game.selected ? Utils.getTile(Game.selected.r, Game.selected.c) : null;
@@ -114,15 +115,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             Game.player.food -= CFG.COST.FOUND_CITY;
             tile.city = true;
-            tile.last = Game.turn; 
+            tile.last = Game.turn; // Timestamp for city cooldown
             tile.unit = null;    // Unit is consumed
 
             Game.units = Game.units.filter(u => u !== unit);
             if (Game.selected === unit) Game.selected = null;
 
-            // Tile remains visited
+            // Tile remains visited, renderTile will handle the class
             Renderer.renderTile(tile);
-            Actions.endTurn(); 
+            // updateHUD is called by endTurn
+            Actions.endTurn(); // Founding a city ends the turn
         },
         spawnUnitFromCity: (cityTile) => { // City action to produce a unit
             if (!cityTile.city || Game.turn - cityTile.last < CFG.CITY_CD || Game.player.food < CFG.COST.SPAWN_UNIT) return;
@@ -132,10 +134,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let spawnR = -1, spawnC = -1;
 
+            // Try to spawn on the city tile itself if empty and passable
             if (!cityTile.unit && CFG.COST[cityTile.terr] < Infinity) {
                 spawnR = cityR;
                 spawnC = cityC;
             } else {
+                // Find an adjacent empty and passable tile
                 const emptyNeighbor = Utils.getNeighbors(cityR, cityC).find(([nr, nc]) => {
                     const neighborTile = Utils.getTile(nr, nc);
                     return neighborTile && !neighborTile.unit && CFG.COST[neighborTile.terr] < Infinity;
@@ -143,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (emptyNeighbor) {
                     [spawnR, spawnC] = emptyNeighbor;
                 } else {
-                    return; 
+                    return; // No valid spot to spawn
                 }
             }
 
@@ -151,8 +155,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Attempt to add unit. addUnit will handle marking the tile as visited.
                 if (Actions.addUnit(spawnR, spawnC)) {
                     Game.player.food -= CFG.COST.SPAWN_UNIT;
-                    cityTile.last = Game.turn; 
-                    Renderer.renderTile(cityTile); 
+                    cityTile.last = Game.turn; // Reset cooldown
+                    Renderer.renderTile(cityTile); // Update city's 'ready' state
                     Renderer.updateHUD(); 
                 }
             }
@@ -161,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const fromTile = Utils.getTile(unit.r, unit.c);
             const toTile = Utils.getTile(r, c);
 
-            if (!toTile || CFG.COST[toTile.terr] === Infinity) return; 
+            if (!toTile || CFG.COST[toTile.terr] === Infinity) return; // Should be caught by click handler, but defensive
 
             if (fromTile) {
                 fromTile.unit = null;
@@ -177,7 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 toTile.visited = true; // Mark as visited and collect yield
             }
             Renderer.renderTile(toTile); // Will apply visited style
-            Actions.endTurn(); 
+            // updateHUD is called by endTurn
+            Actions.endTurn(); // Moving a unit ends the turn
         }
     };
 
@@ -204,8 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         div: div,
                         unit: null,
                         city: false,
-                        last: 0,      
-                        visited: false // Initialized to false
+                        last: 0,      // Turn city was last active (founded/spawned unit)
+                        visited: false // Initialized to false for visited status
                     };
                 }
             }
@@ -232,27 +237,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const clickedTile = Utils.getTile(r, c);
             if (!clickedTile) return;
 
-            if (clickedTile.unit) { 
+            if (clickedTile.unit) { // Clicked on a tile with a unit
                 if (Game.selected === clickedTile.unit) {
-                    Actions.foundCity(clickedTile.unit); 
+                    Actions.foundCity(clickedTile.unit); // Try to found city
                 } else {
-                    Actions.selectUnit(clickedTile.unit); 
+                    Actions.selectUnit(clickedTile.unit); // Select the unit
                 }
                 return;
             }
 
-            if (clickedTile.city) { 
+            if (clickedTile.city) { // Clicked on a tile with a city (and no unit on it)
                 Actions.spawnUnitFromCity(clickedTile);
                 return;
             }
 
-            if (!Game.selected) return; 
+            // Clicked on an empty, non-city tile
+            if (!Game.selected) return; // No unit selected, cannot move
 
             const isNeighbor = Utils.getNeighbors(Game.selected.r, Game.selected.c)
                 .some(([nr, nc]) => nr === r && nc === c);
-            if (!isNeighbor) return; 
+            if (!isNeighbor) return; // Not a neighbor
 
-            if (CFG.COST[clickedTile.terr] === Infinity) return; 
+            if (CFG.COST[clickedTile.terr] === Infinity) return; // Impassable terrain
 
             Actions.moveUnit(Game.selected, r, c);
         },
@@ -279,12 +285,12 @@ document.addEventListener('DOMContentLoaded', () => {
         handleCenterViewClick: () => {
             let unitToCenter = Game.selected;
             if (!unitToCenter && Game.units.length > 0) {
-                unitToCenter = Game.units[0]; 
+                unitToCenter = Game.units[0]; // Default to the first unit if none selected
             }
 
             if (unitToCenter) {
                 Utils.centerOn(unitToCenter.r, unitToCenter.c);
-                Actions.selectUnit(unitToCenter); 
+                Actions.selectUnit(unitToCenter); // Ensure it's (re)selected and visuals are updated
             }
         }
     };
@@ -305,9 +311,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         Renderer.updateHUD();
-        Renderer.renderAll(); 
+        Renderer.renderAll(); // Initial full render
         Utils.centerOn(startR, startC);
 
+        // Attach event listeners
         DOM.worldEl.addEventListener('click', EventHandlers.handleWorldClick);
         DOM.mapEl.addEventListener('mousedown', EventHandlers.handleMapMouseDown);
         window.addEventListener('mousemove', EventHandlers.handleWindowMouseMove);
@@ -316,5 +323,5 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.centerBtn.addEventListener('click', EventHandlers.handleCenterViewClick);
     }
 
-    init(); 
+    init(); // Start the game
 });
