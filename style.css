@@ -1,0 +1,20 @@
+:root { --tile: 40px; } /* Default, will be updated by JS if CFG.TILE changes */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+body { font-family: sans-serif; background: #222; color: #ddd; display: flex; flex-direction: column; overflow: hidden; }
+#hud { position: sticky; top: 0; z-index: 1000; background: #111; padding: 6px 8px; border-bottom: 1px solid #444; }
+#status { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 14px; }
+#instructions { font-size: 11px; color: #bbb; margin-top: 4px; }
+button { padding: 2px 8px; font-size: 14px; cursor: pointer; }
+#map { flex: 1; overflow: auto; background: #000; cursor: grab; position: relative; }
+#map.dragging { cursor: grabbing; }
+#world { position: relative; }
+.tile { position: absolute; width: var(--tile); height: var(--tile); display: flex; align-items: center; justify-content: center; user-select: none; line-height: 1; }
+.grass { background: #3a7d3a; }
+.forest { background: #2e5d2e; }
+.water { background: #1e3d7a; }
+.mountain { background: #666; }
+.cityIcon { font-size: 22px; color: #00d8ff; text-shadow: 0 0 4px #0ff; margin-right: 2px; }
+.city.ready .cityIcon { color: #0f0; text-shadow: 0 0 6px #0f0; }
+.unitIcon { font-size: 24px; color: #ff0; font-weight: bold; }
+.selected .unitIcon { color: orange; }
